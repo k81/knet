@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/k81/knet"
-	"github.com/k81/knet/examples/echo"
+	"github.com/k81/knet/examples/echo/protocol"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -28,7 +28,7 @@ func (h *clientEchoHandler) OnDisconnected(session *knet.IoSession) {
 }
 
 func (h *clientEchoHandler) OnMessage(session *knet.IoSession, msg knet.Message) error {
-	echoMsg := msg.(*echo.EchoMessage)
+	echoMsg := msg.(*protocol.EchoMessage)
 	fmt.Printf("\n----server message: %v----\n\n", echoMsg.Content)
 	return nil
 }
@@ -43,7 +43,7 @@ func main() {
 	clientConf.AutoReconnect = true
 	client = knet.NewTCPClient(context.Background(), clientConf)
 
-	client.SetProtocol(&echo.EchoProtocol{})
+	client.SetProtocol(&protocol.EchoProtocol{})
 	client.SetIoHandler(&clientEchoHandler{})
 
 	if err = client.Dial("127.0.0.1:8888"); err != nil {
@@ -66,7 +66,7 @@ func main() {
 		}
 
 		var (
-			msg   = echo.NewEchoMessage(console.Text())
+			msg   = protocol.NewEchoMessage(console.Text())
 			reply knet.Response
 		)
 
@@ -75,7 +75,7 @@ func main() {
 			return
 		}
 
-		msg = reply.(*echo.EchoMessage)
+		msg = reply.(*protocol.EchoMessage)
 		fmt.Printf("recv>%s\n", msg.Content)
 	}
 }

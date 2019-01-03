@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/k81/knet"
-	"github.com/k81/knet/examples/echo"
+	"github.com/k81/knet/examples/echo/protocol"
 )
+
+var mctx = context.Background()
 
 type srvEchoHandler struct {
 	knet.IoHandlerAdapter
@@ -15,7 +18,7 @@ type srvEchoHandler struct {
 
 func (h *srvEchoHandler) OnConnected(session *knet.IoSession) error {
 	log.Printf("session connected, remote_addr=%v", session.RemoteAddr())
-	//m := echo.NewEchoMessage("welcome to the echo server, enjoy it!")
+	//m := protocol.NewEchoMessage("welcome to the echo server, enjoy it!")
 	//session.Send(m)
 	return nil
 }
@@ -29,7 +32,7 @@ func (h *srvEchoHandler) OnError(session *knet.IoSession, err error) {
 }
 
 func (h *srvEchoHandler) OnMessage(session *knet.IoSession, m knet.Message) error {
-	echoMsg := m.(*echo.EchoMessage)
+	echoMsg := m.(*protocol.EchoMessage)
 	log.Printf("RECV: msg=%v", echoMsg.Content)
 	session.Send(mctx, m)
 	return nil
@@ -40,7 +43,7 @@ func main() {
 	//srvConf.MaxConnection = 2
 
 	srv := knet.NewTCPServer(mctx, srvConf)
-	srv.SetProtocol(&echo.EchoProtocol{})
+	srv.SetProtocol(&protocol.EchoProtocol{})
 	srv.SetIoHandler(&srvEchoHandler{})
 
 	go func() {
