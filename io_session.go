@@ -24,7 +24,7 @@ type IoSession struct {
 	handler   IoHandler
 	protocol  Protocol
 	conn      *Conn
-	attrs     map[string]interface{}
+	attrs     map[interface{}]interface{}
 	attrsLock sync.RWMutex
 	sendQ     chan Message
 	recvQ     chan Message
@@ -53,7 +53,7 @@ func NewIoSession(ctx context.Context, srv IoService, conn net.Conn) *IoSession 
 		conf:     srv.IoConfig(),
 		protocol: srv.Protocol(),
 		conn:     &Conn{Conn: conn},
-		attrs:    make(map[string]interface{}),
+		attrs:    make(map[interface{}]interface{}),
 		ctx:      newctx,
 		cancel:   cancel,
 		sendQ:    make(chan Message, srv.IoConfig().SendQueueSize),
@@ -86,14 +86,14 @@ func (s *IoSession) LocalAddr() net.Addr {
 	return s.conn.LocalAddr()
 }
 
-func (s *IoSession) GetAttr(key string) (v interface{}) {
+func (s *IoSession) GetAttr(key interface{}) (v interface{}) {
 	s.attrsLock.RLock()
 	v = s.attrs[key]
 	s.attrsLock.RUnlock()
 	return
 }
 
-func (s *IoSession) SetAttr(key string, value interface{}) {
+func (s *IoSession) SetAttr(key, value interface{}) {
 	s.attrsLock.Lock()
 	s.attrs[key] = value
 	s.attrsLock.Unlock()
