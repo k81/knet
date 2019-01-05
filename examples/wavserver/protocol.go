@@ -9,47 +9,50 @@ import (
 )
 
 const (
-	PktTypeHandshake = 1
-	PktTypeAudioData = 2
+	keyHeader = "key_header"
 )
 
-type Header struct {
-	Type uint32
-	Len  uint32
+type StreamHeader struct {
+	Caller string
 }
 
-type Packet struct {
-	Header
+type StreamData struct {
 	Data []byte
 }
-
-const (
-	keyReadBuf = "key_readbuf"
-)
 
 type AudioProtocol struct{}
 
 func (p *AudioProtocol) Decode(session *knet.IoSession, reader io.Reader) (knet.Message, error) {
-	pkt := &Packet{}
-	err := binary.Read(reader, binary.BigEndian, &pkt.Header)
-	if err != nil {
-		return nil, err
-	}
-
-	readBuf, ok := session.GetAttr(keyReadBuf).(*bytes.Buffer)
+	_, ok := session.GetAttr(keyHeader).(*StreamHeader)
 	if !ok {
-		readBuf = &bytes.Buffer{}
-		session.SetAttr(keyReadBuf, readBuf)
-	}
-	readBuf.Reset()
+		var callerLen uint16
+		err := binary.Read(reader, binary.BigEndian, &callerLen)
+		if err != nil {
+			return nil, err
+		}
 
-	if _, err = io.CopyN(readBuf, reader, int64(pkt.Len)); err != nil {
+		buf := &bytes.Buffer{}
+		if _, err = io.CopyN(buf, reader, int64(callerLen)); err != nil {
+			return nil, err
+		}
+
+		header := &StreamHeader{
+			Caller: buf.String(),
+		}
+		session.SetAttr(keyHeader, header)
+		return header, nil
+	}
+
+	buf := &bytes.Buffer{}
+	if _, err := io.CopyN(buf, reader, 512); err != nil {
 		return nil, err
 	}
 
-	pkt.Data = readBuf.Bytes()
+	data := &StreamData{
+		Data: buf.Bytes(),
+	}
 
-	return pkt, nil
+	return data, nil
 }
 
 func (p *AudioProtocol) Encode(session *knet.IoSession, m knet.Message) (data []byte, err error) {

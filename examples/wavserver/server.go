@@ -80,15 +80,14 @@ func (h *srvAudioHandler) OnError(session *knet.IoSession, err error) {
 }
 
 func (h *srvAudioHandler) OnMessage(session *knet.IoSession, m knet.Message) error {
-	pkt := m.(*Packet)
-	switch pkt.Type {
-	case PktTypeHandshake:
-		callId := string(pkt.Data)
+	switch pkt := m.(type) {
+	case *StreamHeader:
+		callId := pkt.Caller
 		callId = strings.Replace(callId, "/", "_", -1)
 		callId = strings.Replace(callId, "-", "_", -1)
-		log.Printf("got handshake: %v\n", callId)
+		log.Printf("got stream header: %v\n", callId)
 		session.SetAttr(keyCallId, callId)
-	case PktTypeAudioData:
+	case *StreamData:
 		callId, ok := session.GetAttr(keyCallId).(string)
 		if !ok {
 			log.Printf("ERROR: got audio data before handshake\n")
@@ -159,10 +158,10 @@ func (h *srvAudioHandler) OnMessage(session *knet.IoSession, m knet.Message) err
 			)
 			return err
 		}
-		log.Printf("go data %v bytes, callid=%v\n", pkt.Len, callId)
+		log.Printf("go data %v bytes, callid=%v\n", len(pkt.Data), callId)
 		return nil
 	default:
-		log.Printf("ERROR: invalid packet type: %v\n", pkt.Type)
+		log.Printf("ERROR: invalid packet\n")
 		return ErrInvalidPacket
 	}
 	return nil
@@ -176,7 +175,7 @@ func main() {
 	srv.SetProtocol(&AudioProtocol{})
 	srv.SetIoHandler(&srvAudioHandler{})
 
-	addr := "0.0.0.0:9000"
+	addr := "0.0.0.0:19000"
 	go func() {
 		http.ListenAndServe(addr, nil)
 	}()
